@@ -23,7 +23,7 @@ import {
   Add,
   FilterList
 } from '@mui/icons-material'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import AccountMetricsCard from './AccountMetricsCard'
 import CombinedMetricsChart from './CombinedMetricsChart'
 import QuickActions from './QuickActions'
@@ -35,7 +35,7 @@ function Dashboard() {
 
   // Calcular métricas combinadas
   const combinedMetrics = useMemo(() => {
-    const activeAccounts = mlAccounts.filter(account => account.is_active)
+    const activeAccounts = (accounts || []).filter(account => account.is_active)
     
     const filteredAccounts = selectedAccounts === 'all' 
       ? activeAccounts 
