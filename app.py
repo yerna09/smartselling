@@ -64,6 +64,244 @@ class User(db.Model):
     def __repr__(self):
         return f'<User {self.username}>'
 
+# ============= NUEVOS MODELOS MULTICUENTA =============
+
+# Modelo para múltiples cuentas de Mercado Libre
+class MLAccount(db.Model):
+    __tablename__ = 'ml_accounts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    
+    # Datos de la cuenta ML
+    ml_user_id = db.Column(db.String(100), unique=True, nullable=False)
+    ml_nickname = db.Column(db.String(100), nullable=True)
+    ml_first_name = db.Column(db.String(100), nullable=True)
+    ml_last_name = db.Column(db.String(100), nullable=True)
+    ml_email = db.Column(db.String(200), nullable=True)
+    ml_country_id = db.Column(db.String(10), nullable=True)
+    ml_site_id = db.Column(db.String(10), nullable=True)
+    
+    # Tokens OAuth
+    access_token = db.Column(db.String(500), nullable=False)
+    refresh_token = db.Column(db.String(500), nullable=True)
+    token_expires_at = db.Column(db.DateTime, nullable=True)
+    
+    # Estado de la cuenta
+    is_active = db.Column(db.Boolean, default=True)
+    account_alias = db.Column(db.String(100), nullable=True)
+    
+    # Métricas cacheadas
+    total_sales = db.Column(db.Numeric(10, 2), default=0)
+    total_orders = db.Column(db.Integer, default=0)
+    active_listings = db.Column(db.Integer, default=0)
+    last_metrics_update = db.Column(db.DateTime, nullable=True)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    
+    # Relación con User
+    user = db.relationship('User', backref=db.backref('ml_accounts', lazy=True))
+    
+    def to_dict(self):
+        """Convertir a diccionario para JSON"""
+        return {
+            'id': self.id,
+            'ml_user_id': self.ml_user_id,
+            'ml_nickname': self.ml_nickname,
+            'ml_first_name': self.ml_first_name,
+            'ml_last_name': self.ml_last_name,
+            'ml_email': self.ml_email,
+            'ml_country_id': self.ml_country_id,
+            'ml_site_id': self.ml_site_id,
+            'is_active': self.is_active,
+            'account_alias': self.account_alias,
+            'total_sales': float(self.total_sales) if self.total_sales else 0,
+            'total_orders': self.total_orders,
+            'active_listings': self.active_listings,
+            'last_metrics_update': self.last_metrics_update.isoformat() if self.last_metrics_update else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f'<MLAccount {self.ml_nickname} ({self.ml_user_id})>'
+
+# ============= NUEVOS ENDPOINTS MULTICUENTA =============
+
+# Obtener todas las cuentas ML del usuario
+@app.route('/ml-accounts')
+@token_required
+def get_ml_accounts(current_user):
+    try:
+        accounts = MLAccount.query.filter_by(user_id=current_user.id).all()
+        
+        return jsonify({
+            'accounts': [account.to_dict() for account in accounts],
+            'total': len(accounts)
+        })
+    except Exception as e:
+        return jsonify({'message': f'Error getting ML accounts: {str(e)}'}), 500
+
+# Actualizar una cuenta ML específica
+@app.route('/ml-accounts/<int:account_id>', methods=['PUT'])
+@token_required
+def update_ml_account(current_user, account_id):
+    try:
+        account = MLAccount.query.filter_by(id=account_id, user_id=current_user.id).first()
+        
+        if not account:
+            return jsonify({'message': 'ML account not found'}), 404
+        
+        data = request.get_json()
+        
+        # Actualizar campos permitidos
+        if 'account_alias' in data:
+            account.account_alias = data['account_alias']
+        if 'is_active' in data:
+            account.is_active = data['is_active']
+        
+        account.updated_at = datetime.datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify(account.to_dict())
+    except Exception as e:
+        return jsonify({'message': f'Error updating ML account: {str(e)}'}), 500
+
+# Eliminar una cuenta ML
+@app.route('/ml-accounts/<int:account_id>', methods=['DELETE'])
+@token_required
+def delete_ml_account(current_user, account_id):
+    try:
+        account = MLAccount.query.filter_by(id=account_id, user_id=current_user.id).first()
+        
+        if not account:
+            return jsonify({'message': 'ML account not found'}), 404
+        
+        db.session.delete(account)
+        db.session.commit()
+        
+        return jsonify({'message': 'ML account removed successfully'})
+    except Exception as e:
+        return jsonify({'message': f'Error removing ML account: {str(e)}'}), 500
+
+# Obtener métricas de una cuenta específica
+@app.route('/ml-accounts/<int:account_id>/metrics')
+@token_required
+def get_account_metrics(current_user, account_id):
+    try:
+        account = MLAccount.query.filter_by(id=account_id, user_id=current_user.id).first()
+        
+        if not account:
+            return jsonify({'message': 'ML account not found'}), 404
+        
+        # Llamar a la API de ML para obtener métricas en tiempo real
+        metrics = fetch_ml_metrics(account.access_token, account.ml_user_id)
+        
+        return jsonify({
+            'account': account.to_dict(),
+            'metrics': metrics
+        })
+    except Exception as e:
+        return jsonify({'message': f'Error getting metrics: {str(e)}'}), 500
+
+# Refrescar métricas de una cuenta
+@app.route('/ml-accounts/<int:account_id>/refresh-metrics', methods=['POST'])
+@token_required
+def refresh_account_metrics(current_user, account_id):
+    try:
+        account = MLAccount.query.filter_by(id=account_id, user_id=current_user.id).first()
+        
+        if not account:
+            return jsonify({'message': 'ML account not found'}), 404
+        
+        # Obtener métricas actualizadas de ML
+        metrics = fetch_ml_metrics(account.access_token, account.ml_user_id)
+        
+        # Actualizar en la base de datos
+        account.total_sales = metrics.get('total_sales', 0)
+        account.total_orders = metrics.get('total_orders', 0)
+        account.active_listings = metrics.get('active_listings', 0)
+        account.last_metrics_update = datetime.datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Metrics updated successfully',
+            'account': account.to_dict()
+        })
+    except Exception as e:
+        return jsonify({'message': f'Error refreshing metrics: {str(e)}'}), 500
+
+# Refrescar métricas de todas las cuentas
+@app.route('/ml-accounts/refresh-all-metrics', methods=['POST'])
+@token_required
+def refresh_all_metrics(current_user):
+    try:
+        accounts = MLAccount.query.filter_by(user_id=current_user.id, is_active=True).all()
+        updated_count = 0
+        
+        for account in accounts:
+            try:
+                metrics = fetch_ml_metrics(account.access_token, account.ml_user_id)
+                
+                account.total_sales = metrics.get('total_sales', 0)
+                account.total_orders = metrics.get('total_orders', 0)
+                account.active_listings = metrics.get('active_listings', 0)
+                account.last_metrics_update = datetime.datetime.utcnow()
+                
+                updated_count += 1
+            except Exception as e:
+                print(f"Error updating metrics for account {account.id}: {e}")
+                continue
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': f'Updated metrics for {updated_count} accounts',
+            'updated_count': updated_count,
+            'total_accounts': len(accounts)
+        })
+    except Exception as e:
+        return jsonify({'message': f'Error refreshing all metrics: {str(e)}'}), 500
+
+def fetch_ml_metrics(access_token, ml_user_id):
+    """Función auxiliar para obtener métricas de ML API"""
+    try:
+        headers = {'Authorization': f'Bearer {access_token}'}
+        
+        # Obtener información del usuario
+        user_response = requests.get(f'https://api.mercadolibre.com/users/{ml_user_id}', headers=headers)
+        user_data = user_response.json() if user_response.status_code == 200 else {}
+        
+        # Obtener órdenes (simplificado - últimos 30 días)
+        orders_response = requests.get(f'https://api.mercadolibre.com/orders/search/recent?seller={ml_user_id}', headers=headers)
+        orders_data = orders_response.json() if orders_response.status_code == 200 else {}
+        
+        # Obtener publicaciones activas
+        items_response = requests.get(f'https://api.mercadolibre.com/users/{ml_user_id}/items/search?status=active', headers=headers)
+        items_data = items_response.json() if items_response.status_code == 200 else {}
+        
+        # Calcular métricas
+        total_orders = len(orders_data.get('results', []))
+        total_sales = sum([order.get('total_amount', 0) for order in orders_data.get('results', [])])
+        active_listings = items_data.get('paging', {}).get('total', 0)
+        
+        return {
+            'total_sales': total_sales,
+            'total_orders': total_orders,
+            'active_listings': active_listings,
+            'user_data': user_data
+        }
+    except Exception as e:
+        print(f"Error fetching ML metrics: {e}")
+        return {
+            'total_sales': 0,
+            'total_orders': 0,
+            'active_listings': 0,
+            'user_data': {}
+        }
+
 # Decorador para validar JWT en rutas protegidas
 def token_required(f):
     @wraps(f)
@@ -254,7 +492,7 @@ def ml_auth(current_user):
         'message': 'Redirect user to this URL to authorize Mercado Libre access'
     })
 
-# Endpoint para recibir el código OAuth de Mercado Libre y obtener tokens
+# Endpoint para recibir el código OAuth de Mercado Libre y obtener tokens (ACTUALIZADO MULTICUENTA)
 @app.route('/mercadolibre/callback')
 @token_required
 def ml_callback(current_user):
@@ -283,16 +521,67 @@ def ml_callback(current_user):
             }), 400
 
         data = response.json()
+        ml_user_id = str(data['user_id'])
 
-        # Guardar tokens de Mercado Libre
-        current_user.ml_access_token = data['access_token']
-        current_user.ml_refresh_token = data['refresh_token']
-        current_user.ml_user_id = str(data['user_id'])
+        # Verificar si ya existe esta cuenta ML
+        existing_account = MLAccount.query.filter_by(ml_user_id=ml_user_id).first()
+        
+        if existing_account:
+            if existing_account.user_id != current_user.id:
+                return jsonify({
+                    'message': 'Esta cuenta de Mercado Libre ya está vinculada a otro usuario'
+                }), 400
+            
+            # Actualizar tokens de cuenta existente
+            existing_account.access_token = data['access_token']
+            existing_account.refresh_token = data['refresh_token']
+            existing_account.is_active = True
+            existing_account.updated_at = datetime.datetime.utcnow()
+            
+            db.session.commit()
+            
+            return jsonify({
+                'message': 'Cuenta de Mercado Libre actualizada exitosamente!',
+                'account': existing_account.to_dict()
+            })
+        
+        # Obtener información del usuario de ML
+        headers = {'Authorization': f'Bearer {data["access_token"]}'}
+        user_response = requests.get(f'https://api.mercadolibre.com/users/{ml_user_id}', headers=headers)
+        
+        user_info = {}
+        if user_response.status_code == 200:
+            user_info = user_response.json()
+
+        # Crear nueva cuenta ML
+        new_account = MLAccount(
+            user_id=current_user.id,
+            ml_user_id=ml_user_id,
+            ml_nickname=user_info.get('nickname', f'ml_{ml_user_id}'),
+            ml_first_name=user_info.get('first_name'),
+            ml_last_name=user_info.get('last_name'),
+            ml_email=user_info.get('email'),
+            ml_country_id=user_info.get('country_id'),
+            ml_site_id=user_info.get('site_id'),
+            access_token=data['access_token'],
+            refresh_token=data['refresh_token'],
+            is_active=True,
+            account_alias=f"Cuenta ML - {user_info.get('nickname', ml_user_id)}"
+        )
+        
+        db.session.add(new_account)
+        
+        # También actualizar el usuario principal (compatibilidad con versión anterior)
+        if not current_user.ml_access_token:
+            current_user.ml_access_token = data['access_token']
+            current_user.ml_refresh_token = data['refresh_token']
+            current_user.ml_user_id = ml_user_id
+        
         db.session.commit()
 
         return jsonify({
-            'message': 'Mercado Libre linked successfully!',
-            'ml_user_id': current_user.ml_user_id
+            'message': 'Nueva cuenta de Mercado Libre vinculada exitosamente!',
+            'account': new_account.to_dict()
         })
 
     except Exception as e:
