@@ -174,7 +174,13 @@ def register():
             'username': new_user.username
         }), 201)
         
-        resp.set_cookie('token', token, httponly=True, max_age=30*24*60*60)
+        # Configurar cookie para funcionar entre subdominios
+        resp.set_cookie('token', token, 
+                       httponly=True, 
+                       max_age=30*24*60*60,
+                       domain='.smartselling.com.ar',
+                       secure=True,
+                       samesite='None')
         
         return resp
 
@@ -213,7 +219,13 @@ def login():
             'ml_linked': bool(user.ml_access_token)
         }))
         
-        resp.set_cookie('token', token, httponly=True, max_age=30*24*60*60)
+        # Configurar cookie para funcionar entre subdominios
+        resp.set_cookie('token', token, 
+                       httponly=True, 
+                       max_age=30*24*60*60,
+                       domain='.smartselling.com.ar',
+                       secure=True,
+                       samesite='None')
         
         return resp
 
@@ -442,7 +454,12 @@ def logout(current_user):
         db.session.commit()
 
         resp = make_response(jsonify({'message': 'Logged out successfully'}))
-        resp.set_cookie('token', '', expires=0)
+        # Limpiar cookie con la misma configuración de dominio
+        resp.set_cookie('token', '', 
+                       expires=0,
+                       domain='.smartselling.com.ar',
+                       secure=True,
+                       samesite='None')
         
         return resp
 
