@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartSelling - Integración Mercado Libre</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            width: 100%;
+            max-width: 400px;
+            margin: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-ml {
+            background: #3483fa;
+            color: white;
+        }
+
+        .btn-ml:hover {
+            background: #2968c8;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 131, 250, 0.4);
+        }
+
+        .btn-logout {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-logout:hover {
+            background: #c82333;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .toggle-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .toggle-link a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .user-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .user-info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .user-info p {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .ml-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .ml-status.linked {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .ml-status.not-linked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .ml-data {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .ml-data pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 SmartSelling</h1>
+            <p>Integración con Mercado Libre</p>
+        </div>
+
+        <div class="content">
+            <!-- Formulario de Login -->
+            <div id="login-form" class="form-container">
+                <div id="message"></div>
+                
+                <form id="authForm">
+                    <div class="form-group">
+                        <label for="username">Usuario</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Contraseña</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" id="auth-btn">
+                        Iniciar Sesión
+                    </button>
+                </form>
+                
+                <div class="toggle-link">
+                    <a href="#" id="toggle-auth">¿No tienes cuenta? Regístrate</a>
+                </div>
+            </div>
+
+            <!-- Panel de usuario logueado -->
+            <div id="user-panel" class="hidden">
+                <div class="user-info">
+                    <h3>Bienvenido, <span id="user-name"></span>!</h3>
+                    <p>Usuario ID: <span id="user-id"></span></p>
+                    <p>Estado ML: <span id="ml-status" class="ml-status"></span></p>
+                </div>
+
+                <button class="btn btn-ml" id="link-ml" onclick="linkMercadoLibre()">
+                    🔗 Vincular Mercado Libre
+                </button>
+                
+                <button class="btn btn-secondary" id="get-ml-data" onclick="getMercadoLibreData()">
+                    📊 Obtener Datos ML
+                </button>
+                
+                <button class="btn btn-secondary" onclick="refreshMLToken()">
+                    🔄 Renovar Token ML
+                </button>
+                
+                <button class="btn btn-logout" onclick="logout()">
+                    🚪 Cerrar Sesión
+                </button>
+
+                <div id="ml-data-container" class="hidden">
+                    <div class="ml-data">
+                        <pre id="ml-data"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading spinner -->
+            <div id="loading" class="hidden">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Cargando...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Variables globales
+        let isLoginMode = true;
+        let currentUser = null;
+
+        // API Base URL - Usar siempre el dominio de API de producción
+        const API_BASE = 'https://api-test.smartselling.com.ar';
+
+        // Elementos del DOM
+        const loginForm = document.getElementById('login-form');
+        const userPanel = document.getElementById('user-panel');
+        const loading = document.getElementById('loading');
+        const message = document.getElementById('message');
+        const authForm = document.getElementById('authForm');
+        const authBtn = document.getElementById('auth-btn');
+        const toggleAuth = document.getElementById('toggle-auth');
+
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAuthStatus();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            authForm.addEventListener('submit', handleAuth);
+            toggleAuth.addEventListener('click', function(e) {
+                e.preventDefault();
+                toggleAuthMode();
+            });
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            if (isLoginMode) {
+                authBtn.textContent = 'Iniciar Sesión';
+                toggleAuth.textContent = '¿No tienes cuenta? Regístrate';
+            } else {
+                authBtn.textContent = 'Registrarse';
+                toggleAuth.textContent = '¿Ya tienes cuenta? Inicia sesión';
+            }
+        }
+
+        async function handleAuth(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            if (!username || !password) {
+                showMessage('Por favor completa todos los campos', 'error');
+                return;
+            }
+
+            const endpoint = isLoginMode ? '/login' : '/register';
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch(API_BASE + endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(data.message, 'success');
+                    currentUser = data;
+                    setTimeout(() => {
+                        showUserPanel();
+                    }, 1000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch(API_BASE + '/profile', {
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data;
+                    showUserPanel();
+                }
+            } catch (error) {
+                console.log('Usuario no autenticado');
+            }
+        }
+
+        function showUserPanel() {
+            loginForm.classList.add('hidden');
+            userPanel.classList.remove('hidden');
+            
+            if (currentUser) {
+                document.getElementById('user-name').textContent = currentUser.username;
+                document.getElementById('user-id').textContent = currentUser.user_id;
+                
+                const mlStatus = document.getElementById('ml-status');
+                if (currentUser.ml_linked) {
+                    mlStatus.textContent = 'Vinculado';
+                    mlStatus.className = 'ml-status linked';
+                    document.getElementById('link-ml').textContent = '✅ ML Vinculado';
+                } else {
+                    mlStatus.textContent = 'No vinculado';
+                    mlStatus.className = 'ml-status not-linked';
+                }
+            }
+        }
+
+        function showLoginForm() {
+            userPanel.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            currentUser = null;
+            
+            // Limpiar formulario
+            document.getElementById('username').value = '';
+            document.getElementById('password').value = '';
+        }
+
+        async function linkMercadoLibre() {
+            try {
+                const response = await fetch(API_BASE + '/mercadolibre/auth', {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Redirigiendo a Mercado Libre...', 'info');
+                    setTimeout(() => {
+                        window.location.href = data.auth_url;
+                    }, 1000);
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error al vincular ML: ' + error.message, 'error');
+            }
+        }
+
+        async function getMercadoLibreData() {
+            showLoading(true);
+            
+            try {
+                const response = await fetch(API_BASE + '/mercadolibre/data', {
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    document.getElementById('ml-data').textContent = JSON.stringify(data.data, null, 2);
+                    document.getElementById('ml-data-container').classList.remove('hidden');
+                    showMessage('Datos obtenidos correctamente', 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                    if (data.refresh_needed) {
+                        showMessage('Intentando renovar token...', 'info');
+                        await refreshMLToken();
+                    }
+                }
+            } catch (error) {
+                showMessage('Error al obtener datos: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function refreshMLToken() {
+            try {
+                const response = await fetch(API_BASE + '/mercadolibre/refresh', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Token renovado exitosamente', 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error al renovar token: ' + error.message, 'error');
+            }
+        }
+
+        async function logout() {
+            try {
+                const response = await fetch(API_BASE + '/logout', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                
+                showMessage(data.message, 'success');
+                setTimeout(() => {
+                    showLoginForm();
+                }, 1000);
+            } catch (error) {
+                showMessage('Error al cerrar sesión: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            message.innerHTML = `<div class="message ${type}">${text}</div>`;
+            setTimeout(() => {
+                message.innerHTML = '';
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            if (show) {
+                loading.classList.remove('hidden');
+            } else {
+                loading.classList.add('hidden');
+            }
+        }
+
+        // Manejar callback de Mercado Libre
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('code')) {
+            showMessage('Procesando autorización de Mercado Libre...', 'info');
+            // El callback se maneja automáticamente por el backend
+            // Limpiar URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+            // Recargar estado del usuario
+            setTimeout(() => {
+                checkAuthStatus();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

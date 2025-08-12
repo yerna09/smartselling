@@ -1,0 +1,25 @@
+[Unit]
+Description=SmartSelling Flask App
+After=network.target
+
+[Service]
+Type=simple
+User=smartselling
+Group=smartselling
+WorkingDirectory=/var/www/smartselling
+Environment=PATH=/var/www/smartselling/venv/bin
+ExecStart=/var/www/smartselling/venv/bin/python app.py
+Restart=always
+RestartSec=10
+
+# Variables de entorno
+Environment=FLASK_ENV=production
+Environment=FLASK_DEBUG=False
+
+# Logs
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=smartselling
+
+[Install]
+WantedBy=multi-user.target

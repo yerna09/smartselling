@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Libre Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button.ml-button {
+            background: #fff159;
+            color: #333;
+        }
+        button.ml-button:hover {
+            background: #e6d84f;
+        }
+        .hidden {
+            display: none;
+        }
+        .message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .user-info {
+            background: #e2e3e5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Mercado Libre Integration Demo</h1>
+        
+        <!-- Sección de Login/Register -->
+        <div id="auth-section">
+            <h2>Autenticación</h2>
+            
+            <div class="form-group">
+                <label for="username">Usuario:</label>
+                <input type="text" id="username" placeholder="Ingresa tu usuario">
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Contraseña:</label>
+                <input type="password" id="password" placeholder="Ingresa tu contraseña">
+            </div>
+            
+            <button onclick="register()">Registrarse</button>
+            <button onclick="login()">Iniciar Sesión</button>
+        </div>
+
+        <!-- Sección de Usuario Logueado -->
+        <div id="user-section" class="hidden">
+            <h2>Panel de Usuario</h2>
+            <div id="user-info" class="user-info"></div>
+            
+            <button onclick="getProfile()">Ver Perfil</button>
+            <button onclick="logout()">Cerrar Sesión</button>
+            
+            <h3>Integración Mercado Libre</h3>
+            <button id="ml-link-btn" class="ml-button" onclick="linkMercadoLibre()">
+                Vincular Mercado Libre
+            </button>
+            <button id="ml-data-btn" class="hidden" onclick="getMercadoLibreData()">
+                Obtener Datos ML
+            </button>
+            <button id="ml-refresh-btn" class="hidden" onclick="refreshMLToken()">
+                Refrescar Token ML
+            </button>
+        </div>
+
+        <!-- Sección de Mensajes -->
+        <div id="messages"></div>
+
+        <!-- Sección de Datos -->
+        <div id="data-section"></div>
+    </div>
+
+    <script>
+        // Detectar si estamos en desarrollo o producción
+        const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const API_BASE = isLocalhost ? 'http://localhost:8000' : 'https://api-test.smartselling.com.ar';
+        
+        let isLoggedIn = false;
+        let userInfo = null;
+
+        // Función para mostrar mensajes
+        function showMessage(message, type = 'info') {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            messagesDiv.appendChild(messageDiv);
+            
+            // Auto-remover después de 5 segundos
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Función para mostrar datos en formato JSON
+        function showData(title, data) {
+            const dataSection = document.getElementById('data-section');
+            dataSection.innerHTML = `
+                <h3>${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+        }
+
+        // Función para hacer requests con cookies
+        async function apiRequest(endpoint, options = {}) {
+            const defaultOptions = {
+                credentials: 'include', // Incluir cookies
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...options.headers
+                }
+            };
+            
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...defaultOptions,
+                ...options
+            });
+            
+            return response;
+        }
+
+        // Registro de usuario
+        async function register() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showMessage('Por favor ingresa usuario y contraseña', 'error');
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Usuario registrado exitosamente', 'success');
+                    userInfo = data;
+                    showUserSection();
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Login de usuario
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            if (!username || !password) {
+                showMessage('Por favor ingresa usuario y contraseña', 'error');
+                return;
+            }
+
+            try {
+                const response = await apiRequest('/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Sesión iniciada exitosamente', 'success');
+                    userInfo = data;
+                    showUserSection();
+                    
+                    // Si ya tiene ML vinculado, mostrar botones ML
+                    if (data.ml_linked) {
+                        showMLButtons();
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Obtener perfil
+        async function getProfile() {
+            try {
+                const response = await apiRequest('/profile');
+                const data = await response.json();
+
+                if (response.ok) {
+                    showData('Perfil de Usuario', data);
+                    userInfo = data;
+                    
+                    if (data.ml_linked) {
+                        showMLButtons();
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Vincular Mercado Libre
+        async function linkMercadoLibre() {
+            try {
+                const response = await apiRequest('/mercadolibre/auth');
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Redirigiendo a Mercado Libre...', 'info');
+                    // Abrir en nueva ventana
+                    window.open(data.auth_url, '_blank');
+                    showMessage('Después de autorizar en ML, los tokens se guardarán automáticamente', 'info');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Obtener datos de Mercado Libre
+        async function getMercadoLibreData() {
+            try {
+                const response = await apiRequest('/mercadolibre/data');
+                const data = await response.json();
+
+                if (response.ok) {
+                    showData('Datos de Mercado Libre', data.data);
+                    showMessage('Datos obtenidos exitosamente', 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                    if (data.refresh_needed) {
+                        showMessage('Intenta refrescar el token de ML', 'info');
+                    }
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Refrescar token de ML
+        async function refreshMLToken() {
+            try {
+                const response = await apiRequest('/mercadolibre/refresh', {
+                    method: 'POST'
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage('Token de ML refrescado exitosamente', 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                const response = await apiRequest('/logout', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    showMessage('Sesión cerrada', 'success');
+                    showAuthSection();
+                } else {
+                    showMessage('Error al cerrar sesión', 'error');
+                }
+            } catch (error) {
+                showMessage('Error de conexión', 'error');
+            }
+        }
+
+        // Mostrar sección de autenticación
+        function showAuthSection() {
+            document.getElementById('auth-section').classList.remove('hidden');
+            document.getElementById('user-section').classList.add('hidden');
+            document.getElementById('data-section').innerHTML = '';
+            isLoggedIn = false;
+            userInfo = null;
+        }
+
+        // Mostrar sección de usuario
+        function showUserSection() {
+            document.getElementById('auth-section').classList.add('hidden');
+            document.getElementById('user-section').classList.remove('hidden');
+            isLoggedIn = true;
+            
+            // Mostrar info del usuario
+            const userInfoDiv = document.getElementById('user-info');
+            userInfoDiv.innerHTML = `
+                <strong>Usuario:</strong> ${userInfo.username}<br>
+                <strong>ID:</strong> ${userInfo.user_id}<br>
+                <strong>ML Vinculado:</strong> ${userInfo.ml_linked ? 'Sí' : 'No'}
+            `;
+        }
+
+        // Mostrar botones de ML
+        function showMLButtons() {
+            document.getElementById('ml-link-btn').classList.add('hidden');
+            document.getElementById('ml-data-btn').classList.remove('hidden');
+            document.getElementById('ml-refresh-btn').classList.remove('hidden');
+        }
+
+        // Enter key para login
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !isLoggedIn) {
+                login();
+            }
+        });
+
+        // Verificar estado inicial
+        window.onload = async function() {
+            try {
+                const response = await apiRequest('/profile');
+                if (response.ok) {
+                    const data = await response.json();
+                    userInfo = data;
+                    showUserSection();
+                    
+                    if (data.ml_linked) {
+                        showMLButtons();
+                    }
+                }
+            } catch (error) {
+                // Usuario no logueado, mostrar auth
+                showAuthSection();
+            }
+        };
+    </script>
+</body>
+</html>
