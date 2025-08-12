@@ -127,6 +127,38 @@ class MLAccount(db.Model):
     def __repr__(self):
         return f'<MLAccount {self.ml_nickname} ({self.ml_user_id})>'
 
+# Decorador para validar JWT en rutas protegidas
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        
+        # Buscar token en headers
+        if 'x-access-token' in request.headers:
+            token = request.headers['x-access-token']
+        # Buscar token en cookies
+        elif request.cookies.get('token'):
+            token = request.cookies.get('token')
+
+        if not token:
+            return jsonify({'message': 'Token is missing!'}), 401
+
+        try:
+            # Decodificar token
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+            current_user = User.query.filter_by(id=data['user_id'], token=token).first()
+            
+            if not current_user:
+                return jsonify({'message': 'Token is invalid or expired!'}), 401
+                
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token expired, please login again!'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Token is invalid!'}), 401
+
+        return f(current_user, *args, **kwargs)
+    return decorated
+
 # ============= NUEVOS ENDPOINTS MULTICUENTA =============
 
 # Obtener todas las cuentas ML del usuario
@@ -301,38 +333,6 @@ def fetch_ml_metrics(access_token, ml_user_id):
             'active_listings': 0,
             'user_data': {}
         }
-
-# Decorador para validar JWT en rutas protegidas
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = None
-        
-        # Buscar token en headers
-        if 'x-access-token' in request.headers:
-            token = request.headers['x-access-token']
-        # Buscar token en cookies
-        elif request.cookies.get('token'):
-            token = request.cookies.get('token')
-
-        if not token:
-            return jsonify({'message': 'Token is missing!'}), 401
-
-        try:
-            # Decodificar token
-            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
-            current_user = User.query.filter_by(id=data['user_id'], token=token).first()
-            
-            if not current_user:
-                return jsonify({'message': 'Token is invalid or expired!'}), 401
-                
-        except jwt.ExpiredSignatureError:
-            return jsonify({'message': 'Token expired, please login again!'}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({'message': 'Token is invalid!'}), 401
-
-        return f(current_user, *args, **kwargs)
-    return decorated
 
 # Ruta de inicio
 @app.route('/')
