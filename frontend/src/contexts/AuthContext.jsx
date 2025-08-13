@@ -16,20 +16,26 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('🔍 Checking auth status at:', `${API_URL}/profile`);
+      
       const response = await fetch(`${API_URL}/profile`, {
         credentials: 'include'
       })
 
+      console.log('📡 Auth check response status:', response.status);
+
       if (response.ok) {
         const userData = await response.json()
+        console.log('✅ User authenticated:', userData);
         setUser(userData)
         setIsAuthenticated(true)
       } else {
+        console.log('❌ User not authenticated');
         setIsAuthenticated(false)
         setUser(null)
       }
     } catch (error) {
-      console.error('Error checking auth status:', error)
+      console.error('🚨 Error checking auth status:', error)
       setIsAuthenticated(false)
       setUser(null)
     } finally {
@@ -39,6 +45,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
+      console.log('🔐 Attempting login at:', `${API_URL}/login`);
+      
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
@@ -48,17 +56,21 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ username, password })
       })
 
+      console.log('📡 Login response status:', response.status);
+
       if (response.ok) {
         const userData = await response.json()
+        console.log('✅ Login successful:', userData);
         setUser(userData)
         setIsAuthenticated(true)
         return { success: true }
       } else {
         const error = await response.json()
+        console.error('❌ Login failed:', error);
         throw new Error(error.message || 'Error de autenticación')
       }
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('🚨 Login error:', error)
       throw new Error(error.message || 'Error de conexión')
     }
   }

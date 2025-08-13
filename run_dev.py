@@ -24,7 +24,7 @@ def main():
     print(f"🌐 Frontend URL: {os.getenv('FRONTEND_URL')}")
     print(f"🔗 API URL: {os.getenv('API_URL')}")
     print(f"🗄️  Base de datos: {os.getenv('DB_NAME')} en {os.getenv('DB_HOST')}")
-    print(f"📡 Puerto: {os.getenv('SERVER_PORT', 8000)}")
+    print(f"📡 Puerto: {os.getenv('SERVER_PORT', 5000)}")
     print("=" * 50)
     
     # Importar y ejecutar la aplicación
@@ -33,7 +33,7 @@ def main():
         app.run(
             debug=True,
             host='127.0.0.1',
-            port=int(os.getenv('SERVER_PORT', 8000))
+            port=int(os.getenv('SERVER_PORT', 5000))
         )
     except ImportError as e:
         print(f"❌ Error importando app.py: {e}")

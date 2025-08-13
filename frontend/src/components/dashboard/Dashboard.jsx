@@ -28,6 +28,8 @@ import { useAuth } from '../../hooks/useAuth'
 import AccountMetricsCard from './AccountMetricsCard'
 import CombinedMetricsChart from './CombinedMetricsChart'
 import QuickActions from './QuickActions'
+import DebugPanel from '../debug/DebugPanel'
+import MLConnectionTest from '../debug/MLConnectionTest'
 import toast from 'react-hot-toast'
 import { API_URL, apiRequest } from '../../config/api'
 
@@ -136,6 +138,12 @@ function Dashboard() {
 
   return (
     <Box p={3}>
+      {/* Debug Panel - Solo en desarrollo */}
+      <DebugPanel />
+      
+      {/* ML Connection Test */}
+      <MLConnectionTest />
+      
       {/* Header */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4" gutterBottom>
