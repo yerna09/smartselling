@@ -67,38 +67,85 @@ const AccountManager = () => {
     const loadAccounts = async () => {
         setLoading(true);
         try {
+            console.log('🔄 Loading ML accounts...');
             const data = await apiRequest('/ml-accounts');
-            setAccounts(data.accounts || []);
-        } catch (error) {
-            console.error('Error loading accounts:', error);
-            if (error.message.includes('Unexpected token')) {
-                toast.error('Error del servidor - respuesta inválida');
-            } else if (error.message.includes('401')) {
-                toast.error('Sesión expirada - por favor inicia sesión nuevamente');
+            console.log('✅ Accounts loaded:', data);
+            
+            if (data && Array.isArray(data.accounts)) {
+                setAccounts(data.accounts);
+                toast.success(`${data.accounts.length} cuentas cargadas`);
             } else {
-                toast.error('Error cargando cuentas: ' + error.message);
+                console.warn('Unexpected data format:', data);
+                setAccounts([]);
+                toast.warning('No se encontraron cuentas ML');
             }
+        } catch (error) {
+            console.error('❌ Error loading accounts:', error);
+            
+            // Mostrar mensaje de error más específico
+            if (error.message.includes('HTML instead of JSON')) {
+                toast.error('Error de configuración del servidor. Contacta al administrador.');
+            } else if (error.message.includes('No se pudo conectar')) {
+                toast.error('No se pudo conectar con el servidor. Verifica tu conexión.');
+            } else {
+                toast.error(`Error cargando cuentas: ${error.message}`);
+            }
+            
+            setAccounts([]);
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddAccount = async () => {
+    const handleAddAccount = () => {
+        // Redirigir a la autorización de ML usando la URL correcta
         try {
-            // Mostrar un loading toast
-            toast.loading('Redirigiendo a MercadoLibre...', { id: 'ml-auth' });
-            
-            // Verificar que el usuario esté autenticado antes de proceder
-            if (!isAuthenticated) {
-                toast.error('Debes estar logueado para vincular una cuenta', { id: 'ml-auth' });
-                return;
-            }
-            
-            // Redirigir a la autorización de ML usando la URL correcta
-            window.location.href = `${API_URL}/mercadolibre/auth`;
+            const authUrl = `${API_URL}/mercadolibre/auth`;
+            console.log('🔗 Redirecting to ML auth:', authUrl);
+            window.location.href = authUrl;
         } catch (error) {
-            console.error('Error al iniciar vinculación:', error);
-            toast.error('Error al vincular cuenta: ' + error.message, { id: 'ml-auth' });
+            console.error('Error redirecting to ML auth:', error);
+            toast.error('Error al iniciar autorización ML');
+        }
+    };
+
+    const handleRefreshMetrics = async (accountId) => {
+        try {
+            toast.loading('Actualizando métricas...', { id: `refresh-${accountId}` });
+            
+            const data = await apiRequest(`/ml-accounts/${accountId}/refresh-metrics`, {
+                method: 'POST'
+            });
+            
+            toast.success('Métricas actualizadas', { id: `refresh-${accountId}` });
+            
+            // Actualizar la cuenta en el estado local
+            setAccounts(prev => prev.map(acc => 
+                acc.id === accountId ? { ...acc, ...data.account } : acc
+            ));
+            
+        } catch (error) {
+            console.error('Error refreshing metrics:', error);
+            toast.error(`Error actualizando métricas: ${error.message}`, { id: `refresh-${accountId}` });
+        }
+    };
+
+    const handleRefreshAllMetrics = async () => {
+        try {
+            toast.loading('Actualizando todas las métricas...');
+            
+            const data = await apiRequest('/ml-accounts/refresh-all-metrics', {
+                method: 'POST'
+            });
+            
+            toast.success(`Métricas actualizadas para ${data.updated_count} cuentas`);
+            
+            // Recargar todas las cuentas
+            await loadAccounts();
+            
+        } catch (error) {
+            console.error('Error refreshing all metrics:', error);
+            toast.error(`Error actualizando métricas: ${error.message}`);
         }
     };
 
@@ -263,15 +310,25 @@ const AccountManager = () => {
                             Administra tus cuentas de Mercado Libre vinculadas
                         </Typography>
                     </Box>
-                    <Button
-                        variant="contained"
-                        size="large"
-                        startIcon={<AddIcon />}
-                        onClick={handleAddAccount}
-                        sx={{ borderRadius: 2, px: 3 }}
-                    >
-                        Vincular Nueva Cuenta
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={<RefreshIcon />}
+                            onClick={handleRefreshAllMetrics}
+                            sx={{ borderRadius: 2 }}
+                        >
+                            Actualizar Todas
+                        </Button>
+                        <Button
+                            variant="contained"
+                            size="large"
+                            startIcon={<AddIcon />}
+                            onClick={handleAddAccount}
+                            sx={{ borderRadius: 2, px: 3 }}
+                        >
+                            Vincular Nueva Cuenta
+                        </Button>
+                    </Box>
                 </Box>
 
                 {accounts.length === 0 && !loading ? (

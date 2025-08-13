@@ -1,18 +1,19 @@
 # 📝 Instrucciones de Actualización VPS - SmartSelling
 
 ## 🎯 Objetivo
-Actualizar el código en el VPS con los nuevos cambios del dashboard de AccountManager.jsx
+Realizar correcciones integrales de la API y base de datos para resolver errores de integración con Mercado Libre
 
-## 📋 Cambios Incluidos en esta Actualización
-- ✨ **Sistema completo de navegación** con Material-UI tabs profesional
-- 🏠 **MainDashboard.jsx**: Dashboard principal con estadísticas, métricas y acciones rápidas
-- 📊 **AnalyticsPage.jsx**: Página completa de analytics con métricas detalladas y tablas
-- ⚙️ **SettingsPage.jsx**: Configuración completa de usuario, notificaciones y API
-- 🧭 **Layout.jsx**: Sistema de navegación con tabs Material-UI y menú de usuario desplegable
-- � **App.jsx**: Rutas actualizadas para todas las páginas (/dashboard, /accounts, /analytics, /settings)
-- 🍞 **react-hot-toast**: Agregado para notificaciones toast elegantes
-- 🎨 **Material-UI**: Interfaz profesional con iconos, cards, tablas y formularios
-- 📱 **Interfaz responsiva** con grid layout adaptativo
+## 📋 Cambios Incluidos en esta Actualización CRÍTICA
+- 🔧 **Corregido endpoint principal** que devolvía HTML en lugar de JSON
+- �️ **Mejorado manejo de errores** en requests API para evitar "Unexpected token '<'"
+- 📊 **Agregados endpoints de métricas ML** con actualización en tiempo real
+- 🗄️ **Implementado modelo de métricas diarias** (MLAccountMetrics)
+- � **Corregido sistema de tokens multicuenta** con mejor manejo de expiración
+- 🎨 **Mejorada interfaz AccountManager** con botones de refresh individuales y globales
+- 🏥 **Agregados endpoints de salud** (/health) e inicialización (/init-db)
+- 🔄 **Implementado refresh automático** de tokens ML cuando expiran
+- � **Mejorados mensajes de error** específicos en el frontend
+- 🗃️ **Script de migración de DB** mejorado (create_db_tables.py)
 
 ## 🚀 Comandos para Ejecutar en el VPS
 
@@ -60,15 +61,15 @@ systemctl restart smartselling || pkill -f "python.*app.py" && nohup python app.
 
 ### Funciones a Probar:
 1. ✅ **Login** en el sistema
-2. ✅ **Navegar entre páginas** usando el menú de tabs (Dashboard, Cuentas ML, Analytics, Configuración)
-3. ✅ **Dashboard Principal** - Ver estadísticas generales y acciones rápidas
-4. ✅ **AccountManager** - Visualizar el dashboard de cuentas ML con interface mejorada
-5. ✅ **Analytics** - Ver métricas detalladas, tablas de cuentas y estadísticas
-6. ✅ **Settings** - Configurar perfil, notificaciones y preferencias de API
-7. ✅ **Hacer clic en "Ver Detalles"** de una cuenta ML (5 tabs: Personal, Comercial, Reputación, Estado, Integración)
-8. ✅ **Vincular nueva cuenta ML** (botón "Vincular Nueva Cuenta")
-9. ✅ **Menu de usuario** - Avatar con dropdown para logout
-10. ✅ **Navegación responsiva** - Verificar que funciona en diferentes tamaños de pantalla
+2. ✅ **Navegar a Accounts** desde el menú
+3. ✅ **Verificar carga correcta** de cuentas ML (sin error de JSON)
+4. ✅ **Probar botón "Actualizar Todas"** las métricas
+5. ✅ **Probar botón individual de refresh** en cada cuenta
+6. ✅ **Vincular nueva cuenta ML** (botón "Vincular Nueva Cuenta")
+7. ✅ **Ver detalles de cuenta** en el dialog
+8. ✅ **Editar cuenta existente** (alias y estado activo)
+9. ✅ **Verificar métricas actualizadas** (ventas, órdenes, publicaciones)
+10. ✅ **Probar manejo de errores** mejorado
 
 ## 🐛 Solución de Problemas
 
@@ -122,17 +123,26 @@ npm run build
 
 Después de la actualización, el usuario debería ver:
 
-1. **Sistema de navegación completo** con tabs Material-UI para todas las secciones
-2. **Dashboard principal** con estadísticas generales, métricas visuales y acciones rápidas
-3. **AccountManager mejorado** con interface profesional y cards de cuentas ML
-4. **Analytics detallado** con métricas, tabla de cuentas y estadísticas consolidadas
-5. **Settings funcional** con configuración de perfil, notificaciones y API
-6. **Menu de usuario** con avatar y dropdown para logout
-7. **Interfaz responsiva** que se adapta a diferentes tamaños de pantalla
-8. **Toast notifications** elegantes para feedback al usuario
+1. ✅ **Carga correcta de cuentas** sin errores de "Unexpected token '<'"
+2. ✅ **Respuestas JSON válidas** de todos los endpoints
+3. ✅ **Métricas ML actualizadas** con datos reales de la API
+4. ✅ **Botones de refresh funcionales** (individual y global)
+5. ✅ **Tokens ML gestionados correctamente** con renovación automática
+6. ✅ **Dashboard responsivo** con tarjetas visuales mejoradas
+7. ✅ **Manejo robusto de errores** con mensajes específicos
+8. ✅ **Base de datos consistente** con todas las tablas necesarias
+9. ✅ **Sistema multicuenta funcional** para múltiples cuentas ML por usuario
+10. ✅ **API de salud disponible** en /health para monitoreo
 
 ---
 
-**Commit:** `63c222e5` - ✨ Agregar sistema completo de navegación con Dashboard, Analytics y Settings  
+**🔥 CORRECCIONES CRÍTICAS APLICADAS:**
+- Endpoint principal ya NO devuelve HTML cuando se esperaba JSON
+- Sistema de tokens ML mejorado con manejo de expiración
+- Métricas de Mercado Libre se actualizan correctamente
+- Base de datos migrada al nuevo esquema multicuenta
+- Frontend con manejo de errores robusto y específico
+
+**Commit:** `TBD` - 🔧 Correcciones integrales API/DB para resolver errores ML  
 **Fecha:** Agosto 12, 2025  
 **Branch:** main

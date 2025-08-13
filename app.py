@@ -139,11 +139,51 @@ class MLAccount(db.Model):
             'total_orders': self.total_orders,
             'active_listings': self.active_listings,
             'last_metrics_update': self.last_metrics_update.isoformat() if self.last_metrics_update else None,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'token_expires_at': self.token_expires_at.isoformat() if self.token_expires_at else None
         }
     
     def __repr__(self):
         return f'<MLAccount {self.ml_nickname} ({self.ml_user_id})>'
+
+# Modelo para métricas diarias de cuentas ML
+class MLAccountMetrics(db.Model):
+    __tablename__ = 'ml_account_metrics'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    ml_account_id = db.Column(db.Integer, db.ForeignKey('ml_accounts.id'), nullable=False)
+    date = db.Column(db.Date, nullable=False)
+    
+    # Métricas diarias
+    daily_sales = db.Column(db.Numeric(10, 2), default=0)
+    daily_orders = db.Column(db.Integer, default=0)
+    daily_views = db.Column(db.Integer, default=0)
+    daily_questions = db.Column(db.Integer, default=0)
+    
+    # Timestamp
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+    
+    # Relación con MLAccount
+    ml_account = db.relationship('MLAccount', backref=db.backref('metrics', lazy=True))
+    
+    # Índice único para evitar duplicados por día
+    __table_args__ = (db.UniqueConstraint('ml_account_id', 'date', name='_ml_account_date_uc'),)
+    
+    def to_dict(self):
+        """Convertir a diccionario para JSON"""
+        return {
+            'id': self.id,
+            'ml_account_id': self.ml_account_id,
+            'date': self.date.isoformat() if self.date else None,
+            'daily_sales': float(self.daily_sales) if self.daily_sales else 0,
+            'daily_orders': self.daily_orders,
+            'daily_views': self.daily_views,
+            'daily_questions': self.daily_questions,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+    
+    def __repr__(self):
+        return f'<MLAccountMetrics {self.ml_account_id} - {self.date}>'
 
 # Decorador para validar JWT en rutas protegidas
 def token_required(f):
@@ -235,6 +275,56 @@ def delete_ml_account(current_user, account_id):
     except Exception as e:
         return jsonify({'message': f'Error removing ML account: {str(e)}'}), 500
 
+# Actualizar datos de cuenta ML desde la API
+@app.route('/ml-accounts/<int:account_id>/update-data', methods=['POST'])
+@token_required
+def update_ml_account_data(current_user, account_id):
+    try:
+        account = MLAccount.query.filter_by(id=account_id, user_id=current_user.id).first()
+        
+        if not account:
+            return jsonify({'message': 'ML account not found'}), 404
+        
+        # Obtener datos actualizados de ML
+        headers = {
+            'Authorization': f'Bearer {account.access_token}',
+            'User-Agent': 'SmartSelling-App/1.0'
+        }
+        
+        try:
+            user_response = requests.get(
+                f'https://api.mercadolibre.com/users/{account.ml_user_id}', 
+                headers=headers, 
+                timeout=10
+            )
+            
+            if user_response.status_code == 200:
+                user_data = user_response.json()
+                
+                # Actualizar datos de la cuenta
+                account.ml_nickname = user_data.get('nickname', account.ml_nickname)
+                account.ml_first_name = user_data.get('first_name', account.ml_first_name)
+                account.ml_last_name = user_data.get('last_name', account.ml_last_name)
+                account.ml_email = user_data.get('email', account.ml_email)
+                account.ml_country_id = user_data.get('country_id', account.ml_country_id)
+                account.ml_site_id = user_data.get('site_id', account.ml_site_id)
+                account.updated_at = datetime.datetime.utcnow()
+                
+                db.session.commit()
+                
+                return jsonify({
+                    'message': 'Account data updated successfully',
+                    'account': account.to_dict()
+                })
+            else:
+                return jsonify({'message': f'Error updating account data: ML API returned {user_response.status_code}'}), 400
+                
+        except requests.exceptions.RequestException as e:
+            return jsonify({'message': f'Error connecting to ML API: {str(e)}'}), 500
+            
+    except Exception as e:
+        return jsonify({'message': f'Error updating ML account data: {str(e)}'}), 500
+
 # Obtener métricas de una cuenta específica
 @app.route('/ml-accounts/<int:account_id>/metrics')
 @token_required
@@ -268,20 +358,80 @@ def refresh_account_metrics(current_user, account_id):
         # Obtener métricas actualizadas de ML
         metrics = fetch_ml_metrics(account.access_token, account.ml_user_id)
         
+        # Verificar si hay error de token
+        if metrics.get('error') == 'token_expired':
+            return jsonify({'message': 'Token expired, please reconnect account'}), 401
+        
         # Actualizar en la base de datos
         account.total_sales = metrics.get('total_sales', 0)
         account.total_orders = metrics.get('total_orders', 0)
         account.active_listings = metrics.get('active_listings', 0)
         account.last_metrics_update = datetime.datetime.utcnow()
         
+        # Actualizar datos del usuario si están disponibles
+        user_data = metrics.get('user_data', {})
+        if user_data:
+            account.ml_nickname = user_data.get('nickname', account.ml_nickname)
+            account.ml_first_name = user_data.get('first_name', account.ml_first_name)
+            account.ml_last_name = user_data.get('last_name', account.ml_last_name)
+            account.ml_email = user_data.get('email', account.ml_email)
+        
+        db.session.commit()
+        
+        # Guardar métricas diarias
+        today = datetime.date.today()
+        daily_metrics = MLAccountMetrics.query.filter_by(
+            ml_account_id=account.id, 
+            date=today
+        ).first()
+        
+        if not daily_metrics:
+            daily_metrics = MLAccountMetrics(
+                ml_account_id=account.id,
+                date=today,
+                daily_sales=metrics.get('total_sales', 0),
+                daily_orders=metrics.get('total_orders', 0),
+                daily_views=0,  # Por ahora 0, agregar endpoint específico después
+                daily_questions=0
+            )
+            db.session.add(daily_metrics)
+        else:
+            daily_metrics.daily_sales = metrics.get('total_sales', 0)
+            daily_metrics.daily_orders = metrics.get('total_orders', 0)
+        
         db.session.commit()
         
         return jsonify({
             'message': 'Metrics updated successfully',
-            'account': account.to_dict()
+            'account': account.to_dict(),
+            'daily_metrics': daily_metrics.to_dict()
         })
     except Exception as e:
         return jsonify({'message': f'Error refreshing metrics: {str(e)}'}), 500
+
+# Obtener métricas diarias de una cuenta
+@app.route('/ml-accounts/<int:account_id>/daily-metrics')
+@token_required
+def get_daily_metrics(current_user, account_id):
+    try:
+        account = MLAccount.query.filter_by(id=account_id, user_id=current_user.id).first()
+        
+        if not account:
+            return jsonify({'message': 'ML account not found'}), 404
+        
+        # Obtener métricas de los últimos 30 días
+        thirty_days_ago = datetime.date.today() - datetime.timedelta(days=30)
+        daily_metrics = MLAccountMetrics.query.filter_by(ml_account_id=account.id).filter(
+            MLAccountMetrics.date >= thirty_days_ago
+        ).order_by(MLAccountMetrics.date.desc()).all()
+        
+        return jsonify({
+            'account_id': account_id,
+            'metrics': [metric.to_dict() for metric in daily_metrics],
+            'total_records': len(daily_metrics)
+        })
+    except Exception as e:
+        return jsonify({'message': f'Error getting daily metrics: {str(e)}'}), 500
 
 # Refrescar métricas de todas las cuentas
 @app.route('/ml-accounts/refresh-all-metrics', methods=['POST'])
@@ -318,35 +468,68 @@ def refresh_all_metrics(current_user):
 def fetch_ml_metrics(access_token, ml_user_id):
     """Función auxiliar para obtener métricas de ML API"""
     try:
-        headers = {'Authorization': f'Bearer {access_token}'}
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'User-Agent': 'SmartSelling-App/1.0'
+        }
         
-        # Obtener información del usuario
-        user_response = requests.get(f'https://api.mercadolibre.com/users/{ml_user_id}', headers=headers)
-        user_data = user_response.json() if user_response.status_code == 200 else {}
-        
-        # Obtener órdenes (simplificado - últimos 30 días)
-        orders_response = requests.get(f'https://api.mercadolibre.com/orders/search/recent?seller={ml_user_id}', headers=headers)
-        orders_data = orders_response.json() if orders_response.status_code == 200 else {}
+        # Obtener información del usuario ML
+        try:
+            user_response = requests.get(
+                f'https://api.mercadolibre.com/users/{ml_user_id}', 
+                headers=headers, 
+                timeout=10
+            )
+            user_data = user_response.json() if user_response.status_code == 200 else {}
+            
+            if user_response.status_code == 401:
+                print(f"Token expired for user {ml_user_id}")
+                return {'error': 'token_expired', 'user_data': {}}
+                
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching user data for {ml_user_id}: {e}")
+            user_data = {}
         
         # Obtener publicaciones activas
-        items_response = requests.get(f'https://api.mercadolibre.com/users/{ml_user_id}/items/search?status=active', headers=headers)
-        items_data = items_response.json() if items_response.status_code == 200 else {}
+        try:
+            items_response = requests.get(
+                f'https://api.mercadolibre.com/users/{ml_user_id}/items/search?status=active&limit=1', 
+                headers=headers, 
+                timeout=10
+            )
+            items_data = items_response.json() if items_response.status_code == 200 else {}
+            active_listings = items_data.get('paging', {}).get('total', 0)
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching items for {ml_user_id}: {e}")
+            active_listings = 0
         
-        # Calcular métricas
-        total_orders = len(orders_data.get('results', []))
-        total_sales = sum([order.get('total_amount', 0) for order in orders_data.get('results', [])])
-        active_listings = items_data.get('paging', {}).get('total', 0)
+        # Para órdenes, usar endpoint más simple por ahora
+        try:
+            # Solo obtener el conteo básico, no todas las órdenes
+            orders_response = requests.get(
+                f'https://api.mercadolibre.com/users/{ml_user_id}', 
+                headers=headers, 
+                timeout=10
+            )
+            orders_data = orders_response.json() if orders_response.status_code == 200 else {}
+            # Por ahora usar datos del perfil como aproximación
+            total_orders = orders_data.get('seller_reputation', {}).get('transactions', {}).get('completed', 0)
+            total_sales = 0  # Calcular desde órdenes reales requiere más endpoints
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching order data for {ml_user_id}: {e}")
+            total_orders = 0
+            total_sales = 0
         
         return {
-            'total_sales': total_sales,
-            'total_orders': total_orders,
-            'active_listings': active_listings,
+            'total_sales': float(total_sales),
+            'total_orders': int(total_orders),
+            'active_listings': int(active_listings),
             'user_data': user_data
         }
     except Exception as e:
         print(f"Error fetching ML metrics: {e}")
         return {
-            'total_sales': 0,
+            'total_sales': 0.0,
             'total_orders': 0,
             'active_listings': 0,
             'user_data': {}
@@ -357,9 +540,18 @@ def fetch_ml_metrics(access_token, ml_user_id):
 def home():
     # Detectar si la petición viene del frontend de producción o desarrollo
     host = request.headers.get('Host', '')
+    user_agent = request.headers.get('User-Agent', '')
     
-    # Si es una petición de navegador, mostrar la página web
-    if 'text/html' in request.headers.get('Accept', ''):
+    # Solo mostrar HTML si es explícitamente un navegador web navegando directamente
+    # y NO una petición AJAX/fetch
+    is_browser_navigation = (
+        'text/html' in request.headers.get('Accept', '') and
+        'Mozilla' in user_agent and
+        'fetch' not in request.headers.get('Sec-Fetch-Mode', '') and
+        request.headers.get('X-Requested-With') != 'XMLHttpRequest'
+    )
+    
+    if is_browser_navigation:
         # Si viene del dominio de frontend, usar el template moderno
         if 'test.smartselling.com.ar' in host:
             return render_template('frontend.html')
@@ -367,7 +559,7 @@ def home():
             # Para localhost o desarrollo, usar index.html
             return render_template('index.html')
     
-    # Si es una petición de API, devolver JSON
+    # Si es una petición de API o AJAX, SIEMPRE devolver JSON
     return jsonify({
         'message': 'SmartSelling API - Mercado Libre Integration',
         'version': '1.0.0',
@@ -376,6 +568,7 @@ def home():
             'register': 'POST /register',
             'login': 'POST /login',
             'profile': 'GET /profile (requiere token)',
+            'ml_accounts': 'GET /ml-accounts (requiere token)',
             'ml_auth': 'GET /mercadolibre/auth (requiere token)',
             'ml_callback': 'GET /mercadolibre/callback (requiere token)',
             'ml_loading': 'GET /loading (callback ML)',
@@ -664,6 +857,7 @@ def ml_loading():
 def save_ml_tokens(current_user):
     """
     Guarda los tokens de ML que vienen del frontend después del callback
+    Actualizado para sistema multicuenta
     """
     try:
         data = request.get_json()
@@ -671,19 +865,71 @@ def save_ml_tokens(current_user):
         if not data or not data.get('access_token'):
             return jsonify({'message': 'Access token required'}), 400
         
-        # Guardar tokens
-        current_user.ml_access_token = data['access_token']
-        current_user.ml_refresh_token = data.get('refresh_token')
-        current_user.ml_user_id = str(data.get('user_id', ''))
+        access_token = data['access_token']
+        refresh_token = data.get('refresh_token')
+        ml_user_id = str(data.get('user_id', ''))
+        
+        if not ml_user_id:
+            return jsonify({'message': 'ML User ID required'}), 400
+        
+        # Verificar si ya existe una cuenta ML con este user_id
+        existing_account = MLAccount.query.filter_by(ml_user_id=ml_user_id).first()
+        
+        if existing_account:
+            if existing_account.user_id != current_user.id:
+                return jsonify({'message': 'This ML account is already linked to another user'}), 400
+            
+            # Actualizar tokens existentes
+            existing_account.access_token = access_token
+            existing_account.refresh_token = refresh_token
+            existing_account.token_expires_at = datetime.datetime.utcnow() + datetime.timedelta(hours=6)
+            existing_account.is_active = True
+            existing_account.updated_at = datetime.datetime.utcnow()
+            
+            account = existing_account
+        else:
+            # Obtener datos del usuario ML
+            headers = {'Authorization': f'Bearer {access_token}'}
+            try:
+                user_response = requests.get(f'https://api.mercadolibre.com/users/{ml_user_id}', headers=headers)
+                user_data = user_response.json() if user_response.status_code == 200 else {}
+            except:
+                user_data = {}
+            
+            # Crear nueva cuenta ML
+            account = MLAccount(
+                user_id=current_user.id,
+                ml_user_id=ml_user_id,
+                ml_nickname=user_data.get('nickname', f'Cuenta ML {ml_user_id}'),
+                ml_first_name=user_data.get('first_name'),
+                ml_last_name=user_data.get('last_name'),
+                ml_email=user_data.get('email'),
+                ml_country_id=user_data.get('country_id'),
+                ml_site_id=user_data.get('site_id'),
+                access_token=access_token,
+                refresh_token=refresh_token,
+                token_expires_at=datetime.datetime.utcnow() + datetime.timedelta(hours=6),
+                is_active=True,
+                account_alias=f'Cuenta Principal - {current_user.username}'
+            )
+            db.session.add(account)
+        
+        # También actualizar los tokens en el modelo User para compatibilidad (usando la cuenta principal)
+        if not current_user.ml_access_token:  # Solo si no tiene tokens aún
+            current_user.ml_access_token = access_token
+            current_user.ml_refresh_token = refresh_token
+            current_user.ml_user_id = ml_user_id
+        
         db.session.commit()
         
         return jsonify({
-            'message': 'Tokens saved successfully',
-            'ml_user_id': current_user.ml_user_id
+            'message': 'ML account linked successfully',
+            'account': account.to_dict()
         })
         
     except Exception as e:
-        return jsonify({'message': f'Error saving tokens: {str(e)}'}), 500
+        db.session.rollback()
+        return jsonify({'message': f'Error saving ML account: {str(e)}'}), 500
 
 # Ruta protegida que usa el token de Mercado Libre para consultar datos
 @app.route('/mercadolibre/data')
@@ -787,6 +1033,60 @@ def not_found(error):
 @app.errorhandler(500)
 def internal_error(error):
     return jsonify({'message': 'Internal server error'}), 500
+
+# Endpoint para inicializar/migrar la base de datos
+@app.route('/init-db', methods=['POST'])
+def init_database():
+    """
+    Endpoint para crear todas las tablas de la base de datos
+    """
+    try:
+        with app.app_context():
+            # Crear todas las tablas
+            db.create_all()
+            
+            # Verificar tablas creadas
+            from sqlalchemy import text
+            tables = db.session.execute(text(
+                "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
+            )).fetchall()
+            
+            table_names = [table[0] for table in tables]
+            
+            return jsonify({
+                'message': 'Database initialized successfully',
+                'tables_created': table_names,
+                'database_url': f'postgresql://{DB_USER}:***@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+            })
+    except Exception as e:
+        return jsonify({
+            'message': f'Error initializing database: {str(e)}'
+        }), 500
+
+# Endpoint de salud de la API
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Endpoint para verificar el estado de la API y servicios
+    """
+    try:
+        # Verificar conexión a base de datos
+        from sqlalchemy import text
+        db.session.execute(text('SELECT 1'))
+        db_status = 'connected'
+    except Exception as e:
+        db_status = f'error: {str(e)}'
+    
+    return jsonify({
+        'status': 'healthy',
+        'version': '1.0.0',
+        'database': db_status,
+        'environment': os.getenv('FLASK_ENV', 'production'),
+        'ml_client_configured': bool(CLIENT_ID and CLIENT_SECRET),
+        'frontend_url': FRONTEND_URL,
+        'api_url': API_URL,
+        'timestamp': datetime.datetime.utcnow().isoformat()
+    })
 
 if __name__ == '__main__':
     with app.app_context():

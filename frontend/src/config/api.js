@@ -49,6 +49,15 @@ export const apiRequest = async (endpoint, options = {}) => {
         } catch (e) {
           // Si no se puede parsear el JSON, usar el mensaje por defecto
         }
+      } else {
+        // Si no es JSON, posiblemente sea HTML (página de error)
+        const textResponse = await response.text()
+        if (textResponse.includes('<!DOCTYPE') || textResponse.includes('<html')) {
+          errorMessage = `Server returned HTML instead of JSON. Status: ${response.status}`
+          console.error('Received HTML response:', textResponse.substring(0, 200) + '...')
+        } else {
+          errorMessage = textResponse || errorMessage
+        }
       }
       
       throw new Error(errorMessage)
@@ -62,6 +71,16 @@ export const apiRequest = async (endpoint, options = {}) => {
     return response
   } catch (error) {
     console.error(`API request failed for ${url}:`, error)
+    
+    // Mejorar mensajes de error para el usuario
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('No se pudo conectar con el servidor. Verifica tu conexión.')
+    }
+    
+    if (error.message.includes('HTML instead of JSON')) {
+      throw new Error('El servidor devolvió una página web en lugar de datos. Esto puede indicar un error de configuración.')
+    }
+    
     throw error
   }
 }
