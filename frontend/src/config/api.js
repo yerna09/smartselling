@@ -5,7 +5,7 @@ const isDevelopment = window.location.hostname === 'localhost' || window.locatio
 
 // URLs según el entorno (usar variables de entorno si están disponibles)
 export const API_URL = process.env.REACT_APP_API_URL || (isDevelopment 
-  ? 'http://localhost:8000'
+  ? 'http://localhost:5000'
   : 'https://api-test.smartselling.com.ar')
 
 export const FRONTEND_URL = process.env.REACT_APP_FRONTEND_URL || (isDevelopment

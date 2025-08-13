@@ -39,17 +39,27 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const userData = await apiRequest('/login', {
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
         body: JSON.stringify({ username, password })
       })
-      
-      setUser(userData)
-      setIsAuthenticated(true)
-      return { success: true }
+
+      if (response.ok) {
+        const userData = await response.json()
+        setUser(userData)
+        setIsAuthenticated(true)
+        return { success: true }
+      } else {
+        const error = await response.json()
+        throw new Error(error.message || 'Error de autenticación')
+      }
     } catch (error) {
       console.error('Login error:', error)
-      return { success: false, message: error.message || 'Error de conexión' }
+      throw new Error(error.message || 'Error de conexión')
     }
   }
 
