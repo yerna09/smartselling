@@ -190,20 +190,6 @@ const AccountManager = () => {
         }
     };
 
-    const handleRefreshMetrics = async (accountId) => {
-        try {
-            await apiRequest(`/ml-accounts/${accountId}/refresh-metrics`, {
-                method: 'POST'
-            });
-
-            toast.success('Métricas actualizadas');
-            loadAccounts();
-        } catch (error) {
-            console.error('Error refreshing metrics:', error);
-            toast.error('Error actualizando métricas');
-        }
-    };
-
     const handleViewDetails = (account) => {
         setDetailDialog({ open: true, account });
     };
