@@ -14,8 +14,8 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configuración CORS para permitir frontend
-CORS(app, origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')], supports_credentials=True)
+# Configuración CORS para permitir frontend y producción
+CORS(app, origins=['https://test.smartselling.com.ar', 'https://api-test.smartselling.com.ar', 'http://localhost:3000'], supports_credentials=True)
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'tu_clave_secreta_aqui_cambiar_en_produccion')
 
@@ -37,6 +37,7 @@ CLIENT_SECRET = os.getenv('ML_CLIENT_SECRET', '0lVKgECCnZh0QGjhM8xpGHKCxsVbdoLi'
 REDIRECT_URI = os.getenv('ML_REDIRECT_URI', 'https://api-test.smartselling.com.ar/loading')
 API_URL = os.getenv('API_URL', 'https://api-test.smartselling.com.ar')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://test.smartselling.com.ar')
+# ...aquí continúa el resto de tu código original (modelos, rutas, lógica)...
 
 # Modelo de Usuario
 class User(db.Model):
