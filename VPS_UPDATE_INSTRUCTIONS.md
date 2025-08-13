@@ -4,13 +4,15 @@
 Actualizar el código en el VPS con los nuevos cambios del dashboard de AccountManager.jsx
 
 ## 📋 Cambios Incluidos en esta Actualización
-- ✨ **Interfaz completamente rediseñada** del AccountManager con Material-UI profesional
-- 🗂️ **Sistema de tabs** con 5 secciones: Personal, Comercial, Reputación, Estado, Integración
-- 📊 **Dashboard visual** con métricas y tarjetas informativas
-- 🔧 **Corrección de imports** de iconos Material-UI (@mui/icons-material)
-- 📱 **Interfaz responsiva** con grid layout
-- 🔍 **Dialog detallado** para visualización completa de datos ML
-- 📁 **Actualización de .gitignore** para excluir node_modules
+- ✨ **Sistema completo de navegación** con Material-UI tabs profesional
+- 🏠 **MainDashboard.jsx**: Dashboard principal con estadísticas, métricas y acciones rápidas
+- 📊 **AnalyticsPage.jsx**: Página completa de analytics con métricas detalladas y tablas
+- ⚙️ **SettingsPage.jsx**: Configuración completa de usuario, notificaciones y API
+- 🧭 **Layout.jsx**: Sistema de navegación con tabs Material-UI y menú de usuario desplegable
+- � **App.jsx**: Rutas actualizadas para todas las páginas (/dashboard, /accounts, /analytics, /settings)
+- 🍞 **react-hot-toast**: Agregado para notificaciones toast elegantes
+- 🎨 **Material-UI**: Interfaz profesional con iconos, cards, tablas y formularios
+- 📱 **Interfaz responsiva** con grid layout adaptativo
 
 ## 🚀 Comandos para Ejecutar en el VPS
 
@@ -58,13 +60,15 @@ systemctl restart smartselling || pkill -f "python.*app.py" && nohup python app.
 
 ### Funciones a Probar:
 1. ✅ **Login** en el sistema
-2. ✅ **Navegar a Accounts** desde el menú
-3. ✅ **Visualizar el nuevo dashboard** de AccountManager
-4. ✅ **Hacer clic en "Ver Detalles"** de una cuenta ML
-5. ✅ **Probar las 5 tabs** del dialog (Personal, Comercial, Reputación, Estado, Integración)
-6. ✅ **Vincular nueva cuenta ML** (botón "Vincular Nueva Cuenta")
-7. ✅ **Editar cuenta existente** (botón de edición)
-8. ✅ **Actualizar métricas** (botón de refresh)
+2. ✅ **Navegar entre páginas** usando el menú de tabs (Dashboard, Cuentas ML, Analytics, Configuración)
+3. ✅ **Dashboard Principal** - Ver estadísticas generales y acciones rápidas
+4. ✅ **AccountManager** - Visualizar el dashboard de cuentas ML con interface mejorada
+5. ✅ **Analytics** - Ver métricas detalladas, tablas de cuentas y estadísticas
+6. ✅ **Settings** - Configurar perfil, notificaciones y preferencias de API
+7. ✅ **Hacer clic en "Ver Detalles"** de una cuenta ML (5 tabs: Personal, Comercial, Reputación, Estado, Integración)
+8. ✅ **Vincular nueva cuenta ML** (botón "Vincular Nueva Cuenta")
+9. ✅ **Menu de usuario** - Avatar con dropdown para logout
+10. ✅ **Navegación responsiva** - Verificar que funciona en diferentes tamaños de pantalla
 
 ## 🐛 Solución de Problemas
 
@@ -118,15 +122,17 @@ npm run build
 
 Después de la actualización, el usuario debería ver:
 
-1. **Dashboard moderno** en la sección de cuentas ML
-2. **Cards visuales** con información de cada cuenta
-3. **Métricas coloridas** (ventas, órdenes, publicaciones)
-4. **Dialog completo** con 5 tabs al hacer clic en "Ver Detalles"
-5. **Interfaz responsiva** que se adapta a diferentes tamaños de pantalla
-6. **Iconos Material-UI** funcionando correctamente
+1. **Sistema de navegación completo** con tabs Material-UI para todas las secciones
+2. **Dashboard principal** con estadísticas generales, métricas visuales y acciones rápidas
+3. **AccountManager mejorado** con interface profesional y cards de cuentas ML
+4. **Analytics detallado** con métricas, tabla de cuentas y estadísticas consolidadas
+5. **Settings funcional** con configuración de perfil, notificaciones y API
+6. **Menu de usuario** con avatar y dropdown para logout
+7. **Interfaz responsiva** que se adapta a diferentes tamaños de pantalla
+8. **Toast notifications** elegantes para feedback al usuario
 
 ---
 
-**Commit:** `adf4e65a` - ✨ Mejorar interfaz de AccountManager con dashboard completo  
+**Commit:** `63c222e5` - ✨ Agregar sistema completo de navegación con Dashboard, Analytics y Settings  
 **Fecha:** Agosto 12, 2025  
 **Branch:** main
