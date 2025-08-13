@@ -52,7 +52,7 @@ db = SQLAlchemy(app)
 # Configuración de Mercado Libre
 CLIENT_ID = os.getenv('ML_CLIENT_ID', '2582847439583264')
 CLIENT_SECRET = os.getenv('ML_CLIENT_SECRET', '0lVKgECCnZh0QGjhM8xpGHKCxsVbdoLi')
-REDIRECT_URI = os.getenv('ML_REDIRECT_URI', 'http://localhost:8000/loading')  # Usar localhost en desarrollo
+REDIRECT_URI = os.getenv('ML_REDIRECT_URI', 'https://api-test.smartselling.com.ar/loading')  # Usar API domain
 API_URL = os.getenv('API_URL', 'http://localhost:8000')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 

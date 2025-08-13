@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
     Box,
     Card,
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast';
 
 const LoginForm = () => {
     const { login } = useAuth();
+    const navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
         password: ''
@@ -36,8 +38,15 @@ const LoginForm = () => {
         try {
             await login(formData.username, formData.password);
             toast.success('Inicio de sesión exitoso');
+            
+            // Redirección automática al dashboard
+            setTimeout(() => {
+                navigate('/dashboard');
+            }, 500);
+            
         } catch (error) {
             setError(error.message || 'Error al iniciar sesión');
+            toast.error('Error al iniciar sesión');
         } finally {
             setLoading(false);
         }

@@ -45,19 +45,32 @@ function Dashboard() {
 
   const fetchAccounts = async () => {
     try {
+      console.log('🔄 Fetching accounts from:', `${API_URL}/ml-accounts`);
+      
       const response = await fetch(`${API_URL}/ml-accounts`, {
         credentials: 'include'
       })
 
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json()
+        console.log('✅ Accounts data received:', data);
         setAccounts(data.accounts || [])
+        
+        if (!data.accounts || data.accounts.length === 0) {
+          toast.info('No hay cuentas de ML vinculadas. Agrega tu primera cuenta.', {
+            duration: 5000
+          });
+        }
       } else {
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
         toast.error('Error al cargar las cuentas')
       }
     } catch (error) {
-      console.error('Error fetching accounts:', error)
-      toast.error('Error de conexión')
+      console.error('🚨 Error fetching accounts:', error)
+      toast.error('Error de conexión con la API')
     } finally {
       setLoading(false)
     }

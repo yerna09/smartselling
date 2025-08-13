@@ -4,6 +4,7 @@ import { Box } from '@mui/material'
 
 // Componentes
 import Login from './components/auth/Login'
+import Loading from './components/auth/Loading'
 import Dashboard from './components/dashboard/Dashboard'
 import AccountManager from './components/accounts/AccountManager'
 import MetricsView from './components/metrics/MetricsView'
@@ -43,6 +44,11 @@ function AppRoutes() {
     )
   }
 
+  // Ruta especial para el callback de ML (no requiere autenticación)
+  if (window.location.pathname === '/loading') {
+    return <Loading />
+  }
+
   if (!isAuthenticated) {
     return <Login />
   }
@@ -57,6 +63,7 @@ function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/metrics" element={<MetricsView />} />
         <Route path="/metrics/:accountId" element={<MetricsView />} />
+        <Route path="/loading" element={<Loading />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Layout>
