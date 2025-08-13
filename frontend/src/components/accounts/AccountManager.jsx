@@ -50,7 +50,7 @@ import { API_URL, apiRequest } from '../../config/api';
 import toast from 'react-hot-toast';
 
 const AccountManager = () => {
-    const { user } = useAuth();
+    const { user, isAuthenticated } = useAuth();
     const [accounts, setAccounts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [editDialog, setEditDialog] = useState({ open: false, account: null });
@@ -59,8 +59,10 @@ const AccountManager = () => {
     const [detailDialog, setDetailDialog] = useState({ open: false, account: null });
 
     useEffect(() => {
-        loadAccounts();
-    }, []);
+        if (isAuthenticated) {
+            loadAccounts();
+        }
+    }, [isAuthenticated]);
 
     const loadAccounts = async () => {
         setLoading(true);
@@ -196,6 +198,37 @@ const AccountManager = () => {
             )}
         </Paper>
     );
+
+    // Si el usuario no está autenticado, mostrar mensaje de login
+    if (!isAuthenticated) {
+        return (
+            <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                minHeight: '100vh',
+                p: 3,
+                textAlign: 'center'
+            }}>
+                <PersonIcon sx={{ fontSize: 80, color: 'primary.main', mb: 2 }} />
+                <Typography variant="h4" fontWeight="bold" gutterBottom>
+                    Acceso Requerido
+                </Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3, maxWidth: 400 }}>
+                    Necesitas iniciar sesión para acceder a la gestión de cuentas de MercadoLibre
+                </Typography>
+                <Button 
+                    variant="contained" 
+                    size="large"
+                    onClick={() => window.location.href = '/'}
+                    sx={{ borderRadius: 2, px: 4 }}
+                >
+                    Ir al Login
+                </Button>
+            </Box>
+        );
+    }
 
     return (
         <Box sx={{ p: 3, minHeight: '100vh', bgcolor: 'grey.50' }}>
