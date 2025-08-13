@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react'
-
-const API_URL = 'https://api-test.smartselling.com.ar'
+import { API_URL, apiRequest } from '../config/api'
 
 // Crear el contexto
 export const AuthContext = createContext()
@@ -40,35 +39,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (username, password) => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const userData = await apiRequest('/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        credentials: 'include',
         body: JSON.stringify({ username, password })
       })
-
-      if (response.ok) {
-        const userData = await response.json()
-        setUser(userData)
-        setIsAuthenticated(true)
-        return { success: true }
-      } else {
-        const error = await response.json()
-        return { success: false, message: error.message }
-      }
+      
+      setUser(userData)
+      setIsAuthenticated(true)
+      return { success: true }
     } catch (error) {
       console.error('Login error:', error)
-      return { success: false, message: 'Error de conexión' }
+      return { success: false, message: error.message || 'Error de conexión' }
     }
   }
 
   const logout = async () => {
     try {
-      await fetch(`${API_URL}/logout`, {
-        method: 'POST',
-        credentials: 'include'
+      await apiRequest('/logout', {
+        method: 'POST'
       })
     } catch (error) {
       console.error('Logout error:', error)

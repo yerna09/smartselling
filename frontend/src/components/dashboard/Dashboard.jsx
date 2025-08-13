@@ -29,8 +29,7 @@ import AccountMetricsCard from './AccountMetricsCard'
 import CombinedMetricsChart from './CombinedMetricsChart'
 import QuickActions from './QuickActions'
 import toast from 'react-hot-toast'
-
-const API_URL = 'https://api-test.smartselling.com.ar'
+import { API_URL, apiRequest } from '../../config/api'
 
 function Dashboard() {
   const { user } = useAuth()

@@ -14,10 +14,28 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# Configuración CORS para permitir frontend
-CORS(app, origins=[os.getenv('FRONTEND_URL', 'http://localhost:3000')], supports_credentials=True)
+# Configuración CORS para permitir frontend (desarrollo y producción)
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'https://test.smartselling.com.ar',
+    FRONTEND_URL
+]
+
+CORS(app, 
+     origins=ALLOWED_ORIGINS,
+     supports_credentials=True,
+     allow_headers=['Content-Type', 'Authorization', 'x-access-token'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
 
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'tu_clave_secreta_aqui_cambiar_en_produccion')
+
+# Configuración de cookies para desarrollo y producción
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') != 'development'
+app.config['SESSION_COOKIE_SAMESITE'] = 'None' if os.getenv('FLASK_ENV') != 'development' else 'Lax'
+app.config['SESSION_COOKIE_DOMAIN'] = '.smartselling.com.ar' if 'smartselling.com.ar' in os.getenv('FRONTEND_URL', '') else None
 
 # Configuración de base de datos PostgreSQL
 DB_HOST = os.getenv('DB_HOST', 'localhost')
@@ -34,9 +52,9 @@ db = SQLAlchemy(app)
 # Configuración de Mercado Libre
 CLIENT_ID = os.getenv('ML_CLIENT_ID', '2582847439583264')
 CLIENT_SECRET = os.getenv('ML_CLIENT_SECRET', '0lVKgECCnZh0QGjhM8xpGHKCxsVbdoLi')
-REDIRECT_URI = os.getenv('ML_REDIRECT_URI', 'https://api-test.smartselling.com.ar/loading')
-API_URL = os.getenv('API_URL', 'https://api-test.smartselling.com.ar')
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://test.smartselling.com.ar')
+REDIRECT_URI = os.getenv('ML_REDIRECT_URI', 'http://localhost:8000/loading')  # Usar localhost en desarrollo
+API_URL = os.getenv('API_URL', 'http://localhost:8000')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 # Modelo de Usuario
 class User(db.Model):
@@ -412,13 +430,15 @@ def register():
             'username': new_user.username
         }), 201)
         
-        # Configurar cookie para funcionar entre subdominios
+        # Configurar cookie según el entorno
+        is_production = 'smartselling.com.ar' in os.getenv('FRONTEND_URL', '')
+        
         resp.set_cookie('token', token, 
                        httponly=True, 
                        max_age=30*24*60*60,
-                       domain='.smartselling.com.ar',
-                       secure=True,
-                       samesite='None')
+                       domain='.smartselling.com.ar' if is_production else None,
+                       secure=is_production,
+                       samesite='None' if is_production else 'Lax')
         
         return resp
 
@@ -457,13 +477,15 @@ def login():
             'ml_linked': bool(user.ml_access_token)
         }))
         
-        # Configurar cookie para funcionar entre subdominios
+        # Configurar cookie según el entorno
+        is_production = 'smartselling.com.ar' in os.getenv('FRONTEND_URL', '')
+        
         resp.set_cookie('token', token, 
                        httponly=True, 
                        max_age=30*24*60*60,
-                       domain='.smartselling.com.ar',
-                       secure=True,
-                       samesite='None')
+                       domain='.smartselling.com.ar' if is_production else None,
+                       secure=is_production,
+                       samesite='None' if is_production else 'Lax')
         
         return resp
 
@@ -743,12 +765,14 @@ def logout(current_user):
         db.session.commit()
 
         resp = make_response(jsonify({'message': 'Logged out successfully'}))
-        # Limpiar cookie con la misma configuración de dominio
+        # Limpiar cookie según el entorno
+        is_production = 'smartselling.com.ar' in os.getenv('FRONTEND_URL', '')
+        
         resp.set_cookie('token', '', 
                        expires=0,
-                       domain='.smartselling.com.ar',
-                       secure=True,
-                       samesite='None')
+                       domain='.smartselling.com.ar' if is_production else None,
+                       secure=is_production,
+                       samesite='None' if is_production else 'Lax')
         
         return resp
 

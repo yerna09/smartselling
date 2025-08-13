@@ -28,32 +28,12 @@ import AccountMetricsCard from './AccountMetricsCard'
 import CombinedMetricsChart from './CombinedMetricsChart'
 import QuickActions from './QuickActions'
 import toast from 'react-hot-toast'
-
-const API_URL = 'https://api-test.smartselling.com.ar'
+import { API_URL, apiRequest } from '../../config/api'
 
 function Dashboard() {
   const { user } = useAuth()
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
-  Grid,
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Button,
-  Chip,
-  IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Paper
-} from '@mui/material'
-import {
-  AccountBalance,
-  TrendingUp,
-  ShoppingCart,
-  Visibility,
   Refresh,
   Add,
   FilterList

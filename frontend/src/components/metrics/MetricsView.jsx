@@ -25,8 +25,7 @@ import {
   Timeline
 } from '@mui/icons-material'
 import toast from 'react-hot-toast'
-
-const API_URL = 'https://api-test.smartselling.com.ar'
+import { API_URL, apiRequest } from '../../config/api'
 
 function MetricsView() {
   const { accountId } = useParams()
@@ -58,19 +57,11 @@ function MetricsView() {
 
   const fetchAccounts = async () => {
     try {
-      const response = await fetch(`${API_URL}/ml-accounts`, {
-        credentials: 'include'
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setAccounts(data.accounts)
-      } else {
-        toast.error('Error al cargar las cuentas')
-      }
+      const data = await apiRequest('/ml-accounts')
+      setAccounts(data.accounts)
     } catch (error) {
       console.error('Error fetching accounts:', error)
-      toast.error('Error de conexión')
+      toast.error('Error al cargar las cuentas')
     } finally {
       setLoading(false)
     }
@@ -79,19 +70,11 @@ function MetricsView() {
   const fetchAccountMetrics = async (accountId) => {
     try {
       setRefreshing(true)
-      const response = await fetch(`${API_URL}/ml-accounts/${accountId}/metrics`, {
-        credentials: 'include'
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setMetrics(data.metrics)
-      } else {
-        toast.error('Error al cargar las métricas')
-      }
+      const data = await apiRequest(`/ml-accounts/${accountId}/metrics`)
+      setMetrics(data.metrics)
     } catch (error) {
       console.error('Error fetching metrics:', error)
-      toast.error('Error de conexión')
+      toast.error('Error al cargar las métricas')
     } finally {
       setRefreshing(false)
     }
@@ -102,45 +85,34 @@ function MetricsView() {
 
     try {
       setRefreshing(true)
-      const response = await fetch(`${API_URL}/ml-accounts/${selectedAccount.id}/refresh-metrics`, {
-        method: 'POST',
-        credentials: 'include'
+      await apiRequest(`/ml-accounts/${selectedAccount.id}/refresh-metrics`, {
+        method: 'POST'
       })
-
-      if (response.ok) {
-        toast.success('Métricas actualizadas')
-        await fetchAccountMetrics(selectedAccount.id)
-        await fetchAccounts() // Actualizar también la lista de cuentas
-      } else {
-        toast.error('Error al actualizar métricas')
-      }
+      
+      toast.success('Métricas actualizadas')
+      await fetchAccountMetrics(selectedAccount.id)
+      await fetchAccounts() // Actualizar también la lista de cuentas
     } catch (error) {
       console.error('Error refreshing metrics:', error)
-      toast.error('Error de conexión')
+      toast.error('Error al actualizar métricas')
     }
   }
 
   const refreshAllMetrics = async () => {
     try {
       setRefreshing(true)
-      const response = await fetch(`${API_URL}/ml-accounts/refresh-all-metrics`, {
-        method: 'POST',
-        credentials: 'include'
+      const data = await apiRequest('/ml-accounts/refresh-all-metrics', {
+        method: 'POST'
       })
-
-      if (response.ok) {
-        const data = await response.json()
-        toast.success(`Actualizadas ${data.updated_count} cuentas`)
-        await fetchAccounts()
-        if (selectedAccount) {
-          await fetchAccountMetrics(selectedAccount.id)
-        }
-      } else {
-        toast.error('Error al actualizar todas las métricas')
+      
+      toast.success(`Actualizadas ${data.updated_count} cuentas`)
+      await fetchAccounts()
+      if (selectedAccount) {
+        await fetchAccountMetrics(selectedAccount.id)
       }
     } catch (error) {
       console.error('Error refreshing all metrics:', error)
-      toast.error('Error de conexión')
+      toast.error('Error al actualizar todas las métricas')
     }
   }
 
