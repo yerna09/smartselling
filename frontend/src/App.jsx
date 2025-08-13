@@ -7,6 +7,8 @@ import Login from './components/auth/Login'
 import Dashboard from './components/dashboard/Dashboard'
 import AccountManager from './components/accounts/AccountManager'
 import MetricsView from './components/metrics/MetricsView'
+import AnalyticsPage from './components/analytics/AnalyticsPage'
+import SettingsPage from './components/settings/SettingsPage'
 import Layout from './components/layout/Layout'
 
 // Hooks
@@ -51,6 +53,8 @@ function AppRoutes() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/accounts" element={<AccountManager />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/metrics" element={<MetricsView />} />
         <Route path="/metrics/:accountId" element={<MetricsView />} />
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
