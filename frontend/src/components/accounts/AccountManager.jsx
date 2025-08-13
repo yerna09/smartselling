@@ -71,15 +71,35 @@ const AccountManager = () => {
             setAccounts(data.accounts || []);
         } catch (error) {
             console.error('Error loading accounts:', error);
-            toast.error('Error cargando cuentas');
+            if (error.message.includes('Unexpected token')) {
+                toast.error('Error del servidor - respuesta inválida');
+            } else if (error.message.includes('401')) {
+                toast.error('Sesión expirada - por favor inicia sesión nuevamente');
+            } else {
+                toast.error('Error cargando cuentas: ' + error.message);
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleAddAccount = () => {
-        // Redirigir a la autorización de ML usando la URL correcta
-        window.location.href = `${API_URL}/mercadolibre/auth`;
+    const handleAddAccount = async () => {
+        try {
+            // Mostrar un loading toast
+            toast.loading('Redirigiendo a MercadoLibre...', { id: 'ml-auth' });
+            
+            // Verificar que el usuario esté autenticado antes de proceder
+            if (!isAuthenticated) {
+                toast.error('Debes estar logueado para vincular una cuenta', { id: 'ml-auth' });
+                return;
+            }
+            
+            // Redirigir a la autorización de ML usando la URL correcta
+            window.location.href = `${API_URL}/mercadolibre/auth`;
+        } catch (error) {
+            console.error('Error al iniciar vinculación:', error);
+            toast.error('Error al vincular cuenta: ' + error.message, { id: 'ml-auth' });
+        }
     };
 
     const handleEditAccount = (account) => {
