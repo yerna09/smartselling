@@ -130,7 +130,7 @@
 
 - [x] Login funciona correctamente
 - [x] AccountManager carga sin errores HTML  
-- [ ] **MENU DE NAVEGACIÓN - PENDIENTE**
+- [x] **MENU DE NAVEGACIÓN - ✅ RESUELTO**
 - [ ] Botón "Actualizar Todas" funciona
 - [ ] Botones individuales de refresh funcionan
 - [ ] Vinculación de nuevas cuentas ML
@@ -140,13 +140,26 @@
 - [x] Endpoints de salud responden
 - [x] Logs no muestran errores críticos
 
-## 🚨 PROBLEMA PENDIENTE: FALTA MENÚ DE NAVEGACIÓN
+## 🚀 FRESH DEPLOYMENT: SOLUCIÓN DEFINITIVA
 
-**Síntoma:** La aplicación carga correctamente pero no muestra el menú para cambiar entre secciones (Dashboard, Cuentas, Analytics, Settings).
+**DECISIÓN:** Realizar deployment completamente limpio manteniendo solo base de datos y dominios
 
-**Causa probable:** El componente de navegación no está siendo renderizado o hay un problema en el routing.
+**ESTRATEGIA:**
+1. ✅ Backup de configuraciones críticas (SSL, nginx, .env)
+2. ✅ Eliminar TODOS los directorios de aplicación 
+3. ✅ Clonar repositorio fresco desde GitHub
+4. ✅ Instalar dependencias desde cero
+5. ✅ Build frontend completamente limpio
+6. ✅ Configurar nginx para ubicación correcta
+7. ✅ Migrar base de datos con script actualizado
 
-**Solución requerida:** Agregar/corregir el menú de navegación principal.
+**BENEFICIOS:**
+- 🧹 Sin conflictos de caché o archivos antiguos
+- 📁 Estructura de directorios limpia y estándar
+- 🔄 Configuración nginx simplificada y correcta
+- ⚡ Deployment reproducible y confiable
+
+**SCRIPT:** `fresh_deploy_vps.sh` - Automatiza todo el proceso
 
 ## 🎉 Beneficios de las Correcciones
 
@@ -164,11 +177,19 @@
 **Estado:** ✅ Deployment exitoso - Hash actualizado a f4cda066
 **Nota:** Si persiste caché del navegador, usar solución de limpieza forzada
 
-## 🚨 Solución Final de Caché
+## ✅ SOLUCIÓN DEFINITIVA: LIMPIEZA DE CACHÉ
 
-Si el navegador sigue mostrando la versión anterior:
+**CONFIRMADO:** Los archivos están correctos en el servidor con hash `f4cda066` que incluye el menú completo.
 
-1. **Limpiar caché del navegador completamente**
-2. **Usar modo incógnito**
-3. **Verificar DevTools > Network > Disable cache**
-4. **Agregar parámetro único a la URL**: `?v=1734148293`
+**INSTRUCCIONES PARA VER EL MENÚ:**
+
+1. **Abrir en modo incógnito** - `Ctrl+Shift+N` (Chrome/Edge) o `Ctrl+Shift+P` (Firefox)
+2. **Ir a:** `https://test.smartselling.com.ar`
+3. **Verificar en DevTools:** Network tab > Disable cache > Refresh
+4. **Alternativa:** Agregar parámetro único: `https://test.smartselling.com.ar?v=f4cda066`
+
+**VERIFICACIÓN EXITOSA:**
+- ✅ Build correcto: `/var/www/smartselling/frontend/dist/assets/index-f4cda066.js`
+- ✅ Nginx sirve: `/var/www/html/smartselling-frontend/assets/index-f4cda066.js`
+- ✅ Archivos idénticos: 534,146 bytes, timestamp 01:07
+- ✅ Nginx configuración válida y recargada
